@@ -4,8 +4,6 @@
 #include <condition_variable> 
 
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
-#include <boost/test/unit_test_monitor.hpp>
 #include <boost/test/test_tools.hpp>
 
 namespace {
@@ -16,12 +14,16 @@ namespace {
     bool goodmessage = false;
     std::condition_variable newmessage;
 
-    void test_create_on_message(const std::string& topic, std::vector<char> const& message)
+    void test_create_on_message(std::string_view topic, const_charbuf message)
     {
         std::unique_lock<std::mutex> lock(mx);
-        std::vector<char> expected{'$','t','e','s','t','m','e','s','s','a','g','e','$'};
+        std::vector<char>
+            expected{'$','t','e','s','t','m','e','s','s','a','g','e','$'},
+            actual(message.begin(), message.end());
+
         received = true;
-        goodmessage = (expected == message);
+        goodmessage = (expected == actual);
+
         BOOST_CHECK_EQUAL("test_topic", topic);
         BOOST_TEST(expected == message, boost::test_tools::per_element());
         newmessage.notify_one();
