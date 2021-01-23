@@ -53,7 +53,7 @@ class hubmessage
 
     // output buffer views
     auto on_the_wire() const {
-        return std::vector { 
+        return std::array<boost::asio::const_buffer, 2> { 
             boost::asio::buffer(&headers_, sizeof(headers_)),
             boost::asio::buffer(payload_.data(), payload_.size())
         };
