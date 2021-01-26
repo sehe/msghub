@@ -17,20 +17,25 @@ class hubmessage
     // the following affect on-the-wire compatiblity
 	enum action : char { subscribe, unsubscribe, publish };
 
-	enum version_t {
-        version = 0x2,
+    enum version_t {
         // history
         v1 = 0x1, // machine native byte order (i.e. not portable)
         v2 = 0x2, // big-endian (network byte order)
+        //
+        current_version = v2,
     };
-	enum { cookie = 0xF00D ^ (version << 8) };
+
+    // endianness conversions
+    using wire_u16 = boost::endian::big_uint16_t;
+
+    constexpr uint16_t cookie(int v = current_version) { return 0xF00D ^ (v << 8); }
 	enum { messagesize = 0x2000 };
     // the following does NOT affect on-the-wire compatiblity
     enum { preallocated = 196 };
 
     hubmessage(action a={}, std::string_view topic={}, span<char const> msg = {});
 
-	[[nodiscard]] bool             verify()     const;
+	[[nodiscard]] bool             verify();
 	[[nodiscard]] action           get_action() const;
 	[[nodiscard]] std::string_view topic()      const;
 	[[nodiscard]] span<char const> body()       const;
@@ -38,14 +43,11 @@ class hubmessage
   private:
 	#pragma pack(push, 1)
 
-    // endianness conversions
-    using wire_u16 = boost::endian::big_uint16_t;
-
     struct headers_t {
-        wire_u16	topiclen;
-        wire_u16	bodylen;
-        action		msgaction;
-        wire_u16	magic;
+        wire_u16 topiclen;
+        wire_u16 bodylen;
+        action   msgaction;
+        wire_u16 magic;
     };
 	#pragma pack(pop)
 
