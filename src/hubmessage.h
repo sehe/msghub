@@ -6,6 +6,7 @@
 
 #include "span.h"
 #include <boost/container/small_vector.hpp>
+#include <boost/endian.hpp>
 #include <deque>
 
 namespace msghublib {
@@ -15,7 +16,13 @@ class hubmessage
   public:
     // the following affect on-the-wire compatiblity
 	enum action : char { subscribe, unsubscribe, publish };
-	enum { version = 0x1 };
+
+	enum version_t {
+        version = 0x2,
+        // history
+        v1 = 0x1, // machine native byte order (i.e. not portable)
+        v2 = 0x2, // big-endian (network byte order)
+    };
 	enum { cookie = 0xF00D ^ (version << 8) };
 	enum { messagesize = 0x2000 };
     // the following does NOT affect on-the-wire compatiblity
@@ -30,13 +37,21 @@ class hubmessage
 
   private:
 	#pragma pack(push, 1)
+
+    // endianness conversions
+    using wire_u16 = boost::endian::big_uint16_t;
+
     struct headers_t {
-        uint16_t	topiclen;
-        uint16_t	bodylen;
+        wire_u16	topiclen;
+        wire_u16	bodylen;
         action		msgaction;
-        uint16_t	magic;
+        wire_u16	magic;
     };
 	#pragma pack(pop)
+
+    static_assert(sizeof(action)  == 1); // otherwise give attention to endianness
+    static_assert(std::is_standard_layout_v<headers_t>);
+    static_assert(std::is_trivial_v<headers_t>);
 
     headers_t headers_;
     boost::container::small_vector<char, preallocated> payload_;
